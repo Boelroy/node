@@ -129,6 +129,7 @@ void OS::ProtectCode(void* address, const size_t size) {
 
 
 // Create guard pages.
+#if !V8_OS_FUCHSIA
 void OS::Guard(void* address, const size_t size) {
 #if V8_OS_CYGWIN
   DWORD oldprotect;
@@ -137,6 +138,7 @@ void OS::Guard(void* address, const size_t size) {
   mprotect(address, size, PROT_NONE);
 #endif
 }
+#endif  // !V8_OS_FUCHSIA
 
 // Make a region of memory readable and writable.
 void OS::Unprotect(void* address, const size_t size) {
@@ -400,7 +402,10 @@ FILE* OS::FOpen(const char* path, const char* mode) {
   FILE* file = fopen(path, mode);
   if (file == NULL) return NULL;
   struct stat file_stat;
-  if (fstat(fileno(file), &file_stat) != 0) return NULL;
+  if (fstat(fileno(file), &file_stat) != 0) {
+    fclose(file);
+    return NULL;
+  }
   bool is_regular_file = ((file_stat.st_mode & S_IFREG) != 0);
   if (is_regular_file) return file;
   fclose(file);
